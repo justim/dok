@@ -4,24 +4,21 @@ namespace Dok;
 
 class Database implements \ArrayAccess
 {
-	private $_connection;
-	private $_tableNames = [];
+	private $connection;
+	private $tableNames = [];
 
 	private function __construct(\PDO $connection)
 	{
 		$connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-		$this->_connection = $connection;
+		$this->connection = $connection;
 	}
 
 	public static function connectWithPDOConnectionString($connectionString)
 	{
-		try
-		{
+		try {
 			$pdoConnection = new \PDO($connectionString);
 			return new self($pdoConnection);
-		}
-		catch (\Exception $e)
-		{
+		} catch (\Exception $e) {
 			throw new Exception("Invalid database: {$connectionString}", 0, $e);
 		}
 	}
@@ -33,38 +30,32 @@ class Database implements \ArrayAccess
 
 	public function prepare($query)
 	{
-		return $this->_connection->prepare($query);
+		return $this->connection->prepare($query);
 	}
 
 	public function query($query)
 	{
-		return $this->_connection->query($query);
+		return $this->connection->query($query);
 	}
 
 	public function offsetExists($tableName)
 	{
-		try
-		{
+		try {
 			$this->offsetGet($tableName);
 
 			return true;
-		}
-		catch (Exception $e)
-		{
+		} catch (Exception $e) {
 			return false;
 		}
 	}
 
 	public function offsetGet($rawTableName)
 	{
-		@list($tableName, $joinInfo) = explode(':',	$rawTableName, 2);
+		@list($tableName, $joinInfo) = explode(':', $rawTableName, 2);
 
-		if ($this->_tableExists($tableName))
-		{
+		if ($this->tableExists($tableName)) {
 			return new Table($this, $tableName, $joinInfo);
-		}
-		else
-		{
+		} else {
 			throw new Exception('Could not find table: ' . $tableName);
 		}
 	}
@@ -86,29 +77,25 @@ class Database implements \ArrayAccess
 
 	public function lastInsertId()
 	{
-		return $this->_connection->lastInsertId();
+		return $this->connection->lastInsertId();
 	}
 
-	private function _tableExists($tableName)
+	private function tableExists($tableName)
 	{
-		if (isset($this->_tableNames[$tableName]))
-		{
-			return $this->_tableNames[$tableName];
+		if (isset($this->tableNames[$tableName])) {
+			return $this->tableNames[$tableName];
 		}
 
-		try
-		{
+		try {
 			$query = Query::select($this)
 				->table($tableName)
 				->where('1=2');
 			$statement = $query->getStatement();
 
-			$this->_tableNames[$tableName] = true;
+			$this->tableNames[$tableName] = true;
 			return true;
-		}
-		catch (\Exception $e)
-		{
-			$this->_tableNames[$tableName] = false;
+		} catch (\Exception $e) {
+			$this->tableNames[$tableName] = false;
 			return false;
 		}
 	}

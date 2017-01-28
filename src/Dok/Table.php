@@ -4,46 +4,40 @@ namespace Dok;
 
 class Table implements \ArrayAccess, \IteratorAggregate, \Countable
 {
-	private $_db;
-	private $_name;
-	private $_joinInfo;
-
-	private $_iterator;
+	private $db;
+	private $name;
+	private $joinInfo;
 
 	public function __construct(Database $db, $name, $joinInfo = null)
 	{
-		$this->_db = $db;
-		$this->_name = $name;
-		$this->_joinInfo = $joinInfo;
+		$this->db = $db;
+		$this->name = $name;
+		$this->joinInfo = $joinInfo;
 	}
 
 	public function getName()
 	{
-		return $this->_name;
+		return $this->name;
 	}
 
 	public function insert($values)
 	{
-		if (array_key_exists('id', $values) && $values['id'] === null)
-		{
+		if (array_key_exists('id', $values) && $values['id'] === null) {
 			$id = &$values['id'];
 			unset($values['id']);
 			$refId = true;
-		}
-		else
-		{
+		} else {
 			$refId = false;
 		}
 
-		Query::insert($this->_db)
-			->table($this->_name)
+		Query::insert($this->db)
+			->table($this->name)
 			->values($values)
 			->exec();
 
-		$newId = $this->_db->lastInsertId();
+		$newId = $this->db->lastInsertId();
 
-		if ($refId)
-		{
+		if ($refId) {
 			$id = $newId;
 		}
 
@@ -52,36 +46,35 @@ class Table implements \ArrayAccess, \IteratorAggregate, \Countable
 
 	public function delete($id)
 	{
-		Query::delete($this->_db)
-			->table($this->_name)
+		Query::delete($this->db)
+			->table($this->name)
 			->where(['id = ?' => $id])
 			->exec();
 	}
 
 	public function all(Context $context = null)
 	{
-		$statement = $this->_getStatement();
+		$statement = $this->getStatement();
 
-		return $this->_list($statement, $context);
+		return $this->list($statement, $context);
 	}
 
 	public function where($condition, Context $context = null)
 	{
-		$statement = $this->_getStatement($condition);
+		$statement = $this->getStatement($condition);
 
-		return $this->_list($statement, $context);
+		return $this->list($statement, $context);
 	}
 
-	private function _getStatement($condition = null, $limit = null)
+	private function getStatement($condition = null, $limit = null)
 	{
-		$query = Query::select($this->_db)
-			->table($this->_name)
+		$query = Query::select($this->db)
+			->table($this->name)
 			->where($condition)
 			->limit($limit);
 
-		if (!empty($this->_joinInfo))
-		{
-			@list($tableId, $columnId) = explode('.', $this->_joinInfo);
+		if (!empty($this->joinInfo)) {
+			@list($tableId, $columnId) = explode('.', $this->joinInfo);
 			$tableName = $tableId . 's';
 
 			$fields = [
@@ -92,64 +85,55 @@ class Table implements \ArrayAccess, \IteratorAggregate, \Countable
 				$tableName,
 				"{$tableId}_id",
 				'id',
-				$fields);
+				$fields
+			);
 		}
 
 		return $query->exec();
 	}
 
-	private function _list($executedStatement, Context $context = null)
+	private function list($executedStatement, Context $context = null)
 	{
-		if ($context === null)
-		{
+		if ($context === null) {
 			$context = Context::createWithTable($this);
-		}
-		else if ($context->hasRecord())
-		{
+		} elseif ($context->hasRecord()) {
 			$context = Context::createWithTableAndRecord($this, $context->getRecord());
 		}
 
-		return new DataSet(array_map(function($record)
-		{
-			return new Record($this->_db, $this, $record);
+		return new DataSet(array_map(function ($record) {
+			return new Record($this->db, $this, $record);
 		}, $executedStatement->fetchAll(\PDO::FETCH_ASSOC)), $context);
 	}
 
 	public function offsetExists($id)
 	{
-		try
-		{
+		try {
 			$this->offsetGet($id);
 
 			return true;
-		}
-		catch (Exception $e)
-		{
+		} catch (Exception $e) {
 			return false;
 		}
 	}
 
 	public function offsetGet($id)
 	{
-		$statement = $this->_getStatement(
-			["{$this->_name}.id = ?" => $id],
-			1);
+		$statement = $this->getStatement(
+			["{$this->name}.id = ?" => $id],
+			1
+		);
 		$record = $statement->fetch(\PDO::FETCH_ASSOC);
 
-		if (!empty($record))
-		{
-			return new Record($this->_db, $this, $record);
-		}
-		else
-		{
+		if (!empty($record)) {
+			return new Record($this->db, $this, $record);
+		} else {
 			throw new Exception('Could not find record: ' . $id);
 		}
 	}
 
 	public function offsetSet($offset, $values)
 	{
-		if ($offset !== null && !array_key_exists('id', $values))
-		{
+		if ($offset !== null && !array_key_exists('id', $values)) {
 			$values['id'] = $offset;
 		}
 

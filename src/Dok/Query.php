@@ -9,20 +9,20 @@ class Query
 	const UPDATE = 'UPDATE';
 	const DELETE = 'DELETE';
 
-	private $_type;
-	private $_db;
+	private $type;
+	private $db;
 
-	private $_tableName = null;
-	private $_where = null;
-	private $_whereValues = [];
-	private $_limit = null;
-	private $_leftJoin = null;
-	private $_values = [];
+	private $tableName = null;
+	private $where = null;
+	private $whereValues = [];
+	private $limit = null;
+	private $leftJoin = null;
+	private $values = [];
 
 	private function __construct($type, Database $db)
 	{
-		$this->_type = $type;
-		$this->_db = $db;
+		$this->type = $type;
+		$this->db = $db;
 	}
 
 	public static function select(Database $db)
@@ -47,14 +47,14 @@ class Query
 
 	public function table($tableName)
 	{
-		$this->_tableName = $tableName;
+		$this->tableName = $tableName;
 
 		return $this;
 	}
 
 	public function leftJoin($tableName, $column, $foreignColumn, $fields)
 	{
-		$this->_leftJoin = [
+		$this->leftJoin = [
 			'tableName' => $tableName,
 			'column' => $column,
 			'foreignColumn' => $foreignColumn,
@@ -66,11 +66,10 @@ class Query
 
 	public function where($condition)
 	{
-		$this->_where = $condition;
+		$this->where = $condition;
 
-		if (is_array($condition))
-		{
-			$this->_whereValues = array_merge($this->_whereValues, $condition);
+		if (is_array($condition)) {
+			$this->whereValues = array_merge($this->whereValues, $condition);
 		}
 
 		return $this;
@@ -78,22 +77,22 @@ class Query
 
 	public function limit($limit)
 	{
-		$this->_limit = $limit;
+		$this->limit = $limit;
 
 		return $this;
 	}
 
 	public function values($values)
 	{
-		$this->_values = $values;
+		$this->values = $values;
 
 		return $this;
 	}
 
 	public function getStatement()
 	{
-		$query = $this->_getQuery();
-		return $this->_db->prepare($query);
+		$query = $this->getQuery();
+		return $this->db->prepare($query);
 	}
 
 	public function exec()
@@ -101,72 +100,69 @@ class Query
 		$statement = $this->getStatement();
 		$statement->execute(
 			array_merge(
-				array_values($this->_values),
-				array_values($this->_whereValues)));
+				array_values($this->values),
+				array_values($this->whereValues)
+			)
+		);
 
 		return $statement;
 	}
 
-	private function _getQuery()
+	private function getQuery()
 	{
-		if (!isset($this->_tableName))
-		{
+		if (!isset($this->tableName)) {
 			throw new Exception('No table given for query');
 		}
 
 		$result = '';
 
-		switch ($this->_type)
-		{
+		switch ($this->type) {
 			case self::SELECT:
-				$result = $this->_getSelectQuery();
+				$result = $this->getSelectQuery();
 				break;
 
 			case self::INSERT:
-				$result = $this->_getInsertQuery();
+				$result = $this->getInsertQuery();
 				break;
 
 			case self::UPDATE:
-				$result = $this->_getUpdateQuery();
+				$result = $this->getUpdateQuery();
 				break;
 
 			case self::DELETE:
-				$result = $this->_getDeleteQuery();
+				$result = $this->getDeleteQuery();
 				break;
 		}
 
 		return $result;
 	}
 
-	private function _getSelectQuery()
+	private function getSelectQuery()
 	{
-		$escapedTableName = $this->_escapeIdentifier($this->_tableName);
+		$escapedTableName = $this->escapeIdentifier($this->tableName);
 
-		if (isset($this->_leftJoin))
-		{
-			$escapedJoinTableName = $this->_escapeIdentifier($this->_leftJoin['tableName']);
-			$escapedColumn = $this->_escapeIdentifier($this->_leftJoin['column']);
-			$escapedForeignColumn = $this->_escapeIdentifier($this->_leftJoin['foreignColumn']);
+		if (isset($this->leftJoin)) {
+			$escapedJoinTableName = $this->escapeIdentifier($this->leftJoin['tableName']);
+			$escapedColumn = $this->escapeIdentifier($this->leftJoin['column']);
+			$escapedForeignColumn = $this->escapeIdentifier($this->leftJoin['foreignColumn']);
 
 			$sqlColumns = "{$escapedTableName}.*";
 
-			foreach ($this->_leftJoin['fields'] as $as => $field)
-			{
-				$escapedFieldName = $this->_escapeIdentifier($field);
-				$escapedAsName = $this->_escapeIdentifier($as);
+			foreach ($this->leftJoin['fields'] as $as => $field) {
+				$escapedFieldName = $this->escapeIdentifier($field);
+				$escapedAsName = $this->escapeIdentifier($as);
 
 				$sqlColumns .= ", {$escapedJoinTableName}.{$escapedFieldName} as {$escapedAsName}";
 			}
 
-			$sqlLeftJoin = "LEFT JOIN {$escapedJoinTableName} ON {$escapedTableName}.{$escapedColumn} = {$escapedJoinTableName}.{$escapedForeignColumn}";
-		}
-		else
-		{
+			$sqlLeftJoin = "LEFT JOIN {$escapedJoinTableName}
+				ON {$escapedTableName}.{$escapedColumn} = {$escapedJoinTableName}.{$escapedForeignColumn}";
+		} else {
 			$sqlColumns = "{$escapedTableName}.*";
 			$sqlLeftJoin = '';
 		}
-		$sqlWhere = $this->_getWhere();
-		$sqlLimit = $this->_limit !== null ? "LIMIT {$this->_limit}" : '';
+		$sqlWhere = $this->getWhere();
+		$sqlLimit = $this->limit !== null ? "LIMIT {$this->limit}" : '';
 
 		return "SELECT {$sqlColumns}
 			FROM {$escapedTableName}
@@ -176,65 +172,60 @@ class Query
 			";
 	}
 
-	private function _getInsertQuery()
+	private function getInsertQuery()
 	{
 		return "INSERT INTO
-			{$this->_escapeIdentifier($this->_tableName)}
-			(" . implode(', ', array_keys($this->_values)) . ")
+			{$this->escapeIdentifier($this->tableName)}
+			(" . implode(', ', array_keys($this->values)) . ")
 			VALUES
-			(" . implode(', ', array_fill(0, count($this->_values), '?')) . ")";
+			(" . implode(', ', array_fill(0, count($this->values), '?')) . ")";
 	}
 
-	private function _getUpdateQuery()
+	private function getUpdateQuery()
 	{
-		$sqlWhere = $this->_getWhere();
+		$sqlWhere = $this->getWhere();
 		$fields = implode(
 			', ',
 			array_map(
-				function($q)
-				{
-					return $this->_escapeIdentifier($q) . ' = ?';
+				function ($q) {
+					return $this->escapeIdentifier($q) . ' = ?';
 				},
-				array_keys($this->_values)));
+				array_keys($this->values)
+			)
+		);
 
 		return "UPDATE
-			{$this->_escapeIdentifier($this->_tableName)}
+			{$this->escapeIdentifier($this->tableName)}
 			SET {$fields}
 			{$sqlWhere}
 			";
 	}
 
-	private function _getDeleteQuery()
+	private function getDeleteQuery()
 	{
-		$sqlWhere = $this->_getWhere();
+		$sqlWhere = $this->getWhere();
 
 		return "DELETE
-			FROM {$this->_escapeIdentifier($this->_tableName)}
+			FROM {$this->escapeIdentifier($this->tableName)}
 			{$sqlWhere}
 			";
 	}
 
-	private function _getWhere()
+	private function getWhere()
 	{
-		if ($this->_where !== null)
-		{
-			if (is_array($this->_where))
-			{
-				$where = implode(' AND ', array_keys($this->_where));
+		if ($this->where !== null) {
+			if (is_array($this->where)) {
+				$where = implode(' AND ', array_keys($this->where));
 				return "WHERE {$where}";
+			} else {
+				return "WHERE {$this->where}";
 			}
-			else
-			{
-				return "WHERE {$this->_where}";
-			}
-		}
-		else
-		{
+		} else {
 			return '';
 		}
 	}
 
-	private function _escapeIdentifier($identifier)
+	private function escapeIdentifier($identifier)
 	{
 		return '`' . str_replace('`', '``', $identifier) . '`';
 	}

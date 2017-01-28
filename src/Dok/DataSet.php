@@ -4,23 +4,21 @@ namespace Dok;
 
 class DataSet implements \ArrayAccess, \Iterator, \Countable
 {
-	private $_records;
-	private $_context;
+	private $records;
+	private $context;
 
-	private $_iteratorIndex = 0;
+	private $iteratorIndex = 0;
 
 	public function __construct(array $records, Context $context)
 	{
-		$this->_records = $records;
-		$this->_context = $context;
+		$this->records = $records;
+		$this->context = $context;
 	}
 
 	public function offsetExists($offset)
 	{
-		foreach ($this->_records as $record)
-		{
-			if ($record['id'] == $offset)
-			{
+		foreach ($this->records as $record) {
+			if ($record['id'] == $offset) {
 				return true;
 			}
 		}
@@ -30,10 +28,8 @@ class DataSet implements \ArrayAccess, \Iterator, \Countable
 
 	public function offsetGet($offset)
 	{
-		foreach ($this->_records as $record)
-		{
-			if ($record['id'] == $offset)
-			{
+		foreach ($this->records as $record) {
+			if ($record['id'] == $offset) {
 				return $record;
 			}
 		}
@@ -43,8 +39,7 @@ class DataSet implements \ArrayAccess, \Iterator, \Countable
 
 	public function offsetSet($offset, $values)
 	{
-		if ($offset !== null && !array_key_exists('id', $values))
-		{
+		if ($offset !== null && !array_key_exists('id', $values)) {
 			$values['id'] = $offset;
 		}
 
@@ -58,11 +53,10 @@ class DataSet implements \ArrayAccess, \Iterator, \Countable
 
 	public function insert($values)
 	{
-		$table = $this->_context->getTable();
+		$table = $this->context->getTable();
 
-		if ($this->_context->hasRecord())
-		{
-			$record = $this->_context->getRecord();
+		if ($this->context->hasRecord()) {
+			$record = $this->context->getRecord();
 			$recordTable = $record->getTable();
 			$foreignKey = substr($recordTable->getName(), 0, -1) . '_id';
 
@@ -74,40 +68,40 @@ class DataSet implements \ArrayAccess, \Iterator, \Countable
 
 	public function delete($id)
 	{
-		$table = $this->_context->getTable();
+		$table = $this->context->getTable();
 
 		return $table->delete($id);
 	}
 
 	public function current()
 	{
-		return $this->_records[$this->_iteratorIndex];
+		return $this->records[$this->iteratorIndex];
 	}
 
 	public function key()
 	{
-		$record = $this->_records[$this->_iteratorIndex];
+		$record = $this->records[$this->iteratorIndex];
 
 		return $record['id'];
 	}
 
 	public function next()
 	{
-		$this->_iteratorIndex++;
+		$this->iteratorIndex++;
 	}
 
 	public function rewind()
 	{
-		$this->_iteratorIndex = 0;
+		$this->iteratorIndex = 0;
 	}
 
 	public function valid()
 	{
-		return isset($this->_records[$this->_iteratorIndex]);
+		return isset($this->records[$this->iteratorIndex]);
 	}
 
 	public function count()
 	{
-		return count($this->_records);
+		return count($this->records);
 	}
 }
