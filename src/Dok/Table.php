@@ -56,14 +56,14 @@ class Table implements \ArrayAccess, \IteratorAggregate, \Countable
     {
         $statement = $this->getStatement();
 
-        return $this->list($statement, $context);
+        return $this->getList($statement, $context);
     }
 
     public function where($condition, Context $context = null)
     {
         $statement = $this->getStatement($condition);
 
-        return $this->list($statement, $context);
+        return $this->getList($statement, $context);
     }
 
     private function getStatement($condition = null, $limit = null)
@@ -92,7 +92,7 @@ class Table implements \ArrayAccess, \IteratorAggregate, \Countable
         return $query->exec();
     }
 
-    private function list($executedStatement, Context $context = null)
+    private function getList($executedStatement, Context $context = null)
     {
         if ($context === null) {
             $context = Context::createWithTable($this);
