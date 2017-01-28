@@ -1,4 +1,4 @@
-# Dok
+# Dok [![Build Status](https://secure.travis-ci.org/justim/dok.png)](http://travis-ci.org/justim/dok)
 > Databases as arrays
 
 _Note: not really ready for anything production-like_
